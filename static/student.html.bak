@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Teacher</title
+</head>
+<body>
+  <h1>Student</h1>
+  <label for="name">Name:</label>
+  <input type="text" id="name"/>
+  <button id="say_hello">Say Hello!</button>
+
+  <label for="room">Room:</label>
+  <input type="text" id="room"/>
+  <button id="join_room">Join Room</button>
+
+  <label for="room">Number:</label>
+  <input type="text" id="number"/>
+  <button id="enter_guess">Your Guess</button>
+
+  <ul id="list"></ul>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    var socket = io('/student', {transports: ['websocket'], upgrade: false});
+
+    document.getElementById('join_room').addEventListener('click', (e) => {
+      socket.emit('room.join', document.getElementById('room').value);
+    });
+
+    document.getElementById('say_hello').addEventListener('click', (e) => {
+      socket.emit('event',
+      { name: document.getElementById('name').value,
+       room: document.getElementById('room').value});
+    });
+
+    document.getElementById('enter_guess').addEventListener('click', (e) => {
+      socket.emit('enter_number',
+      { name: document.getElementById('name').value,
+       number: document.getElementById('number').value});
+    });
+
+    var addLi = (message) => {
+      var li = document.createElement('li');
+      li.appendChild(document.createTextNode(message));
+      document.getElementById('list').appendChild(li);
+    };
+    socket.on('score', addLi);
+    socket.on('event', addLi);
+    socket.on('enter_number', addLi);
+  </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Teacher</title
+</head>
+<body>
+  <h1>Teacher</h1>
+  <label for="name">Name:</label>
+  <input type="text" id="name"/>
+  <button id="say_hello">Say Hello!</button>
+
+  <label for="room">Room:</label>
+  <input type="text" id="room"/>
+  <button id="join_room">Join Room</button>
+  <button id="get_score">Get Score</button>
+  <button id="append_row">Append</button>
+  <button id="update_guess">Update Guess</button>
+  
+  <ul id="list"></ul>
+  <div id="average_guess"></div>
+  <div id="two_thirds_average"></div>
+ 
+  <table id="guesses">
+  	<thead>
+  	  <tr>
+  	    <th>Student</th>
+  	    <th>In Room</th>
+  	    <th>Guess</th>  	    
+  	  </tr>
+  	</thead>
+  	<tbody></tbody>
+  </table>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+  <script>
+    var socket = io('/teacher', {transports: ['websocket'], upgrade: false});
+
+    document.getElementById('join_room').addEventListener('click', (e) => {
+      socket.emit('room.join', document.getElementById('room').value);
+    });
+
+    document.getElementById('append_row').addEventListener('click', (e) => {
+      addTableRow("Test");
+    });
+
+    document.getElementById('update_guess').addEventListener('click', (e) => {
+      updateTableGuess("Test", 20);
+    });
+
+    document.getElementById('say_hello').addEventListener('click', (e) => {
+      socket.emit('event',
+      { name: document.getElementById('name').value,
+       room: document.getElementById('room').value});
+    });
+
+    document.getElementById('get_score').addEventListener('click', (e) => {
+      socket.emit('get_score', { name: document.getElementById('name').value });
+    });
+
+    var addLi = (message) => {
+      var li = document.createElement('li');
+      li.appendChild(document.createTextNode(message));
+      document.getElementById('list').appendChild(li);
+    };
+
+    var addTableRow = (name) => {
+      jQuery("#guesses > tbody:last-child").append("<tr><td class=\"name\">" + name + "</td><td>Yes</td><td class=\"guess_value\">0</td></tr>");
+    };
+    
+    var updateTableGuess = (name, number) => {
+      jQuery("tr .name:contains('" + name + "')").parent().find('td').each(function(index,elem) {
+        if (jQuery(this).hasClass("guess_value")) {
+          jQuery(this).html(number);
+        }
+      });
+    };    
+
+    var updateGuessTotal = (guess_total) => {
+      student_count = jQuery("#guesses tr .name").length;
+      console.log(student_count);
+      var ave_guess = (guess_total / student_count);
+      jQuery("#average_guess").html(guess_total);
+    }; 
+    
+    socket.on('score', addLi);
+    socket.on('event', addLi);
+    socket.on('enter_number', updateTableGuess);
+    socket.on('get_score', addLi);
+    socket.on('new_user', addTableRow);
+    socket.on('update_guess_total', updateGuessTotal);
+  </script>
+</body>
+</html>
