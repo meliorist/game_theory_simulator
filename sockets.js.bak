@@ -26,7 +26,7 @@ var updatePersonGuess = (socket, name, number) => {
 };
 
 var announceWinner = (socket, name) => {
-  socket.emit('announceWinner', name);
+  socket.emit('announce_winner', name);
 };
 
 var studentNamespace = (socket) => {

@@ -8,6 +8,7 @@ const express = require('express'),
   redis = require('redis');
 
 var app = express();
+// take the port as an argument so you can potentially run off of more than one server
 var server = app.listen(process.argv[2]);
 var io = socketio(server);
 
@@ -15,6 +16,8 @@ var io = socketio(server);
 
 //setup express to use middleware
 app.use('/', router);
+console.log(__dirname + '/static/js');
+app.use(express.static(__dirname + '/static/js'));
 
 var redisClient = redis.createClient(config.redis_port, config.redis_host);
 redisClient.set("GUESS_TOTAL",0);
@@ -44,6 +47,16 @@ teacher.on('connection', (socket) => {
       console.log(reply);
       sockets.returnScore(teacher, e.name, parseInt(reply));
     });
+  });
+  
+  socket.on('clear_total', (e) => {
+    redisClient.set("GUESS_TOTAL",0);
+    teacher.emit('event', 'Total of guesses was cleared');
+  });
+
+  socket.on('announceWinner', (e) => {
+  	console.log("Announce Winner");
+    sockets.announceWinner(student, "Sam");
   });
 
   socket.on('event', (e) => {

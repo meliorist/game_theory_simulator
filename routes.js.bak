@@ -1,6 +1,8 @@
 const router = require('express').Router();
 var path = require('path')
 
+app.set('js', path.join(__dirname, 'static/js'));
+
 router.get('/student', (req, res) => {
   res.sendFile(path.join(__dirname, 'static/student.html'));
 });

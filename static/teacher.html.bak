@@ -1,95 +1,160 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Teacher</title
+  <title>Teacher</title>
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/css-mint/1.4.3/css-mint.min.css"/>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script type="text/javascript" src="/js/jquery-latest.js"></script>
 </head>
 <body>
+	<header class="header">Game Theory Simulator
+	  <div class="nav-right">
+      <nav class="navbar">
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+	</header>
   <h1>Teacher</h1>
-  <label for="name">Name:</label>
-  <input type="text" id="name"/>
-  <button id="say_hello">Say Hello!</button>
+    <!-- buttons -->
+    <div class="gr-row">
+      <div class="col-span-1">
+        <button class="btn primary small rounded" id="clear_total">Clear Total</button>
+      </div>
+      <div class="col-span-1">
+        <button class="btn primary small rounded" id="end_the_round">End Round</button>
+      </div>
+      <div class="col-span-4">
+        &nbsp;
+      </div>
+    </div>    
 
-  <label for="room">Room:</label>
-  <input type="text" id="room"/>
-  <button id="join_room">Join Room</button>
-  <button id="get_score">Get Score</button>
-  <button id="append_row">Append</button>
-  <button id="update_guess">Update Guess</button>
-  
-  <ul id="list"></ul>
-  <div id="average_guess"></div>
-  <div id="two_thirds_average"></div>
+    <div class="gr-row">
+      <div class="col-span-3">
+        Room ID: H1234
+      </div>
+      <div class="col-span-1">
+        Students: <span id="student_count">0</span> 
+      </div>
+      <div class="col-span-1">
+        Average Guess: <span id="average_guess">0</span>
+      </div>
+      <div class="col-span-1">
+        2/3 Average: <span id="two_thirds_average">0</span>
+      </div>
+    </div>
+
+    <div class="gr-row">
+      <div class="col-span-3">
+        <table id="guesses">
+  	      <thead>
+  	        <tr>
+  	          <th>Student</th>
+  	          <th>In Room</th>
+  	          <th>Guess</th>  	    
+  	        </tr>
+  	      </thead>
+  	      <tbody></tbody>
+          </table>
+      </div>
+      <div class="col-span-3" class="card">
+        <div id="guess_plot" style="width:600px;height:400px;"></div>
+      </div>
+    </div>
+
+    <div class="gr-row">
+      <div class="col-span-2" style="height:150px;overflow:scroll;">  
+        <ul id="list"></ul>
+      </div>
+      <div class="col-span-4">
+        &nbsp;
+      </div>
+    </div>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  var socket = io('/teacher', {transports: ['websocket'], upgrade: false});
+  var histogram_data = []; /* data for the plot */
+  var guess_plot_obj; /* Plotly object for the graph */
  
-  <table id="guesses">
-  	<thead>
-  	  <tr>
-  	    <th>Student</th>
-  	    <th>In Room</th>
-  	    <th>Guess</th>  	    
-  	  </tr>
-  	</thead>
-  	<tbody></tbody>
-  </table>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-
-  <script>
-    var socket = io('/teacher', {transports: ['websocket'], upgrade: false});
-
-    document.getElementById('join_room').addEventListener('click', (e) => {
-      socket.emit('room.join', document.getElementById('room').value);
-    });
-
-    document.getElementById('append_row').addEventListener('click', (e) => {
-      addTableRow("Test");
-    });
-
-    document.getElementById('update_guess').addEventListener('click', (e) => {
-      updateTableGuess("Test", 20);
-    });
-
-    document.getElementById('say_hello').addEventListener('click', (e) => {
-      socket.emit('event',
-      { name: document.getElementById('name').value,
-       room: document.getElementById('room').value});
-    });
-
-    document.getElementById('get_score').addEventListener('click', (e) => {
-      socket.emit('get_score', { name: document.getElementById('name').value });
-    });
-
-    var addLi = (message) => {
-      var li = document.createElement('li');
-      li.appendChild(document.createTextNode(message));
-      document.getElementById('list').appendChild(li);
-    };
-
-    var addTableRow = (name) => {
-      jQuery("#guesses > tbody:last-child").append("<tr><td class=\"name\">" + name + "</td><td>Yes</td><td class=\"guess_value\">0</td></tr>");
-    };
+  jQuery(document).ready(function() {
+    // when the page loads, join a room
+    // generate a randomized room code
+    socket.emit('room.join', 'H1234');
     
-    var updateTableGuess = (name, number) => {
-      jQuery("tr .name:contains('" + name + "')").parent().find('td').each(function(index,elem) {
-        if (jQuery(this).hasClass("guess_value")) {
-          jQuery(this).html(number);
-        }
-      });
-    };    
+    var trace = {
+      x: histogram_data,
+      type: 'histogram',
+      histnorm: "count",
+      type: 'histogram',
+      autobinx: false,
+      xbins: {start:0, end:100, size:10}
+    };
+    var data = [trace];
+    guess_plot_obj = Plotly.newPlot("guess_plot", data);
+  });
+   
+  jQuery('#clear_total').click(function(event, ui) {
+    socket.emit('clear_total');
+  });
 
-    var updateGuessTotal = (guess_total) => {
-      student_count = jQuery("#guesses tr .name").length;
-      console.log(student_count);
-      var ave_guess = (guess_total / student_count);
-      jQuery("#average_guess").html(guess_total);
-    }; 
+  jQuery('#end_the_round').click(function(event, ui) {
+    // calculate the winner
+    // broadcast results to all players
+    socket.emit('announceWinner', 'Sam');
+    // save the stats in the database
+  });
+
+  var addLi = (message) => {
+    var li = document.createElement('li');
+    li.appendChild(document.createTextNode(message));
+    document.getElementById('list').appendChild(li);
+  };
+
+  var addTableRow = (name) => {
+    jQuery("#guesses > tbody:last-child").append("<tr><td class=\"name\">" + name + "</td><td>Yes</td><td class=\"guess_value\">0</td></tr>");
+    student_count = jQuery("#guesses tr .name").length;
+    jQuery("#student_count").html(student_count);
+  };
     
-    socket.on('score', addLi);
-    socket.on('event', addLi);
-    socket.on('enter_number', updateTableGuess);
-    socket.on('get_score', addLi);
-    socket.on('new_user', addTableRow);
-    socket.on('update_guess_total', updateGuessTotal);
-  </script>
+  var updateTableGuess = (name, number) => {
+    jQuery("tr .name:contains('" + name + "')").parent().find('td').each(function(index,elem) {
+      if (jQuery(this).hasClass("guess_value")) {
+        jQuery(this).html(number);
+      }
+    });
+    histogram_data.push(number);
+    console.log(histogram_data);
+    var trace = {
+      x: histogram_data,
+      histnorm: "count",
+      type: 'histogram',
+      autobinx: false,
+      xbins: {start:0, end:100, size:10}
+    };
+    var data = [trace];
+    Plotly.newPlot("guess_plot", data);
+  };    
+
+  var updateGuessTotal = (guess_total) => {
+    student_count = jQuery("#guesses tr .name").length;
+    var ave_guess = Math.round(guess_total / student_count);
+    jQuery("#average_guess").html(ave_guess);
+    var two_thirds_ave = Math.round(ave_guess * .67);
+    jQuery("#two_thirds_average").html(two_thirds_ave);
+  }; 
+    
+  socket.on('score', addLi);
+  socket.on('event', addLi);
+  socket.on('enter_number', updateTableGuess);
+  socket.on('get_score', addLi);
+  socket.on('new_user', addTableRow);
+  socket.on('update_guess_total', updateGuessTotal);
+</script>
 </body>
 </html>

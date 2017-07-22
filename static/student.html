@@ -1,41 +1,96 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Teacher</title
+  <title>Game Theory Simulator - Student</title>
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/css-mint/1.4.3/css-mint.min.css"/>
 </head>
 <body>
+	<header class="header">Game Theory Simulator
+	  <div class="nav-right">
+      <nav class="navbar">
+        <ul>
+          <li><a href="#">Home</a></li>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Contact</a></li>
+        </ul>
+      </nav>
+    </div>
+	</header>
   <h1>Student</h1>
-  <label for="name">Name:</label>
-  <input type="text" id="name"/>
-  <button id="say_hello">Say Hello!</button>
+  <div id="enter_name">
+    <div class="gr-row">
+      <div class="col-span-2">
+        <label for="name">Name:</label>
+        <input type="text" id="name"/>
+        <button class="btn primary small rounded" id="enter_name_button">Send</button>
+      </div>
+      <div class="col-span-4">&nbsp;</div>
+    </div>
+  </div>
+  <div id="enter_room" style="display:none;">
+    <div class="gr-row">
+      <div class="col-span-2">
+        <label for="room">Room:</label>
+        <input type="text" id="room"/>
+        <button class="btn primary small rounded" id="enter_room_button">Join Room</button>
+      </div>
+    </div>
+  </div>
+  <div id="round_progress" style="display:none;">
+    <div class="gr-row">
+      <div class="col-span-2">
+        <label for="room">Number:</label>
+         <input type="text" id="number"/>
+         <button class="btn primary small rounded" id="enter_guess">Your Guess</button>
+      </div>
+    </div>
+  </div>
+  <div id="progress_indicator" style="display:none;">
+    <div class="gr-row">
+      <div class="col-span-3">Guesses entered: <span id="guess_count">0</span></div>
+      <div class="col-span-3" id="winner_name">&nbsp;</div>
+    </div>
+  </div>
 
-  <label for="room">Room:</label>
-  <input type="text" id="room"/>
-  <button id="join_room">Join Room</button>
+    <div class="gr-row">
+      <div class="col-span-2">  
+        <ul id="list"></ul>
+      </div>
+      <div class="col-span-4">
+        &nbsp;
+      </div>
+    </div>
 
-  <label for="room">Number:</label>
-  <input type="text" id="number"/>
-  <button id="enter_guess">Your Guess</button>
-
-  <ul id="list"></ul>
   <script src="/socket.io/socket.io.js"></script>
   <script>
     var socket = io('/student', {transports: ['websocket'], upgrade: false});
-
-    document.getElementById('join_room').addEventListener('click', (e) => {
-      socket.emit('room.join', document.getElementById('room').value, document.getElementById('name').value);
+    var student_name = null;
+    
+    jQuery("#enter_name_button").click(function(elem, ui) {
+      student_name = jQuery('#name').val();
+      jQuery("#enter_name").hide();
+      jQuery("#enter_room").show();
     });
 
-    document.getElementById('say_hello').addEventListener('click', (e) => {
-      socket.emit('event',
-      { name: document.getElementById('name').value,
-       room: document.getElementById('room').value});
+    jQuery("#enter_room_button").click(function(elem, ui) {
+      socket.emit('room.join', jQuery('#room').val(), jQuery('#name').val());
+      jQuery("#enter_room").hide();
+      jQuery("#round_progress").show();
     });
 
-    document.getElementById('enter_guess').addEventListener('click', (e) => {
+    jQuery('#enter_guess').click(function(elem,ui) {
       socket.emit('enter_number',
-      { name: document.getElementById('name').value,
-       number: document.getElementById('number').value});
+        {
+        	name: jQuery("#name").val(),
+          number: jQuery("#number").val()
+        }
+      );
+      // disable the send button
+      jQuery("#enter_guess").attr("disabled",true);
+      jQuery("#number").attr("disabled",true);
+      // reveal progress indicator
+      jQuery("#progress_indicator").show();
     });
 
     var addLi = (message) => {
@@ -43,9 +98,16 @@
       li.appendChild(document.createTextNode(message));
       document.getElementById('list').appendChild(li);
     };
+
+    var updateWinner = (name) => {
+    	console.log(name);
+      jQuery("#winner_name").html(name);
+    };
+
     socket.on('score', addLi);
     socket.on('event', addLi);
     socket.on('enter_number', addLi);
+    socket.on('announceWinner', updateWinner);
   </script>
 </body>
 </html>
