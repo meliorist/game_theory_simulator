@@ -5,7 +5,10 @@
   <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/css-mint/1.4.3/css-mint.min.css"/>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <script type="text/javascript" src="/js/jquery-latest.js"></script>
+  <!--script type="text/javascript" src="/js/jquery-latest.js"></script>-->
+  <style>
+  	.row-highlight {background-color:cornflowerblue;}
+  </style>
 </head>
 <body>
 	<header class="header">Game Theory Simulator
@@ -26,9 +29,15 @@
         <button class="btn primary small rounded" id="clear_total">Clear Total</button>
       </div>
       <div class="col-span-1">
+        <button class="btn primary small rounded" id="enable_buttons">Enable Buttons</button>
+      </div>
+      <div class="col-span-1">
+        <button class="btn primary small rounded" id="disable_buttons">Disable Buttons</button>
+      </div>
+      <div class="col-span-1">
         <button class="btn primary small rounded" id="end_the_round">End Round</button>
       </div>
-      <div class="col-span-4">
+      <div class="col-span-2">
         &nbsp;
       </div>
     </div>    
@@ -80,7 +89,9 @@
 <script>
   var socket = io('/teacher', {transports: ['websocket'], upgrade: false});
   var histogram_data = []; /* data for the plot */
-  var guess_plot_obj; /* Plotly object for the graph */
+  var two_thirds_average = 0;
+  var winners_name = null;
+  var winners_socket_id = null;
  
   jQuery(document).ready(function() {
     // when the page loads, join a room
@@ -103,6 +114,14 @@
     socket.emit('clear_total');
   });
 
+  jQuery('#enable_buttons').click(function(event, ui) {
+    socket.emit('enable_buttons');
+  });
+
+  jQuery('#disable_buttons').click(function(event, ui) {
+    socket.emit('disable_buttons');
+  });
+
   jQuery('#end_the_round').click(function(event, ui) {
     // calculate the winner
     // broadcast results to all players
@@ -116,8 +135,15 @@
     document.getElementById('list').appendChild(li);
   };
 
-  var addTableRow = (name) => {
-    jQuery("#guesses > tbody:last-child").append("<tr><td class=\"name\">" + name + "</td><td>Yes</td><td class=\"guess_value\">0</td></tr>");
+  var addTableColumn = () => {
+  	jQuery("thead tr:last-child").append("<th>Guess</th>");
+    jQuery("tbody tr:last-child").each(function(index,elem) {
+      jQuery(elem).append("<td>0</td>");
+    });
+  };
+
+  var addTableRow = (name, socket_id) => {
+    jQuery("#guesses > tbody:last-child").append("<tr id=\"" + socket_id + "\"><td class=\"name\">" + name + "</td><td>Yes</td><td class=\"guess_value\">0</td></tr>");
     student_count = jQuery("#guesses tr .name").length;
     jQuery("#student_count").html(student_count);
   };
@@ -138,14 +164,41 @@
     };
     var data = [trace];
     Plotly.newPlot("guess_plot", data);
+    
+    
   };    
 
   var updateGuessTotal = (guess_total) => {
     student_count = jQuery("#guesses tr .name").length;
     var ave_guess = Math.round(guess_total / student_count);
     jQuery("#average_guess").html(ave_guess);
-    var two_thirds_ave = Math.round(ave_guess * .67);
-    jQuery("#two_thirds_average").html(two_thirds_ave);
+    two_thirds_average = Math.round(ave_guess * .67);
+    jQuery("#two_thirds_average").html(two_thirds_average);
+    var difference = 10000;
+    var row_index = 0;
+    var row_counter = 0;
+    jQuery("tbody tr").each(function(index,elem) {
+      jQuery(elem).attr("style","#fff");
+    	jQuery(elem).find("td").each(function(index,elem) {
+        if (jQuery(this).hasClass("guess_value")) {
+          var thisGuess = parseInt(jQuery(this).html());
+          if (Math.abs(thisGuess-two_thirds_average) < difference) {
+        	  difference = Math.abs(thisGuess-two_thirds_average);
+        	  row_index = row_counter;
+          }
+        }
+      });
+      row_counter++;
+    });
+    var row_counter = 0;
+    jQuery("tbody tr").each(function(index,elem) {
+      if (row_counter == row_index) {
+        jQuery(elem).attr("style","background-color:cornflowerblue");
+        winners_name = jQuery(elem).find("td .name");
+        winners_socket_id = jQuery(elem).id;
+      }
+      row_counter++;
+    });
   }; 
     
   socket.on('score', addLi);

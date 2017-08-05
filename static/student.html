@@ -104,10 +104,27 @@
       jQuery("#winner_name").html(name);
     };
 
+    var updateProgress = (guess_count) => {
+      jQuery("#guess_count").html(guess_count);
+    };
+
+    var changeButtonState = (action) => {
+    	if (action == "disable") {
+        jQuery("#enter_guess").attr("disabled",true);
+        jQuery("#number").attr("disabled",true);
+      }
+    	if (action == "enable") {
+        jQuery("#enter_guess").attr("disabled",false);
+        jQuery("#number").attr("disabled",false);
+      }
+    };
+
     socket.on('score', addLi);
     socket.on('event', addLi);
     socket.on('enter_number', addLi);
+    socket.on('updateProgress', updateProgress);
     socket.on('announceWinner', updateWinner);
+    socket.on('changeButtonState', changeButtonState);
   </script>
 </body>
 </html>
